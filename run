@@ -1,0 +1,214 @@
+#!/usr/bin/env bash
+#
+# usage: ./run command [argument ...]
+#
+# Commands for managing the SensESP workspace.
+#
+# See https://death.andgravity.com/run-sh
+# for an explanation of how it works and why it's useful.
+
+# First, set up the environment.
+# (Check the notes at the end when changing this.)
+
+set -o nounset
+set -o pipefail
+set -o errexit
+
+# Enable this to echo commands as they are executed.
+#set -o xtrace
+
+# Change the current directory to the project root.
+PROJECT_ROOT=${0%/*}
+if [[ $0 != $PROJECT_ROOT && $PROJECT_ROOT != "" ]]; then
+  cd "$PROJECT_ROOT"
+fi
+readonly PROJECT_ROOT=$(pwd)
+
+# Store the absolute path to this script (useful for recursion).
+readonly SCRIPT="$PROJECT_ROOT/$(basename "$0")"
+
+################################################################################
+# Repository Definitions
+
+declare -A REPOS=(
+  ["SensESP"]="git@github.com:SignalK/SensESP.git main"
+  ["ReactESP"]="git@github.com:mairas/ReactESP.git main"
+  ["MAX31856"]="git@github.com:SensESP/MAX31856.git main"
+  ["NMEA0183"]="git@github.com:SensESP/NMEA0183.git main"
+  ["OneWire"]="git@github.com:SensESP/OneWire.git main"
+  ["VEDirect"]="git@github.com:SensESP/VEDirect.git main"
+  ["SensESP-project-template"]="git@github.com:SensESP/SensESP-project-template.git main"
+  ["Tutorial-BMP280"]="git@github.com:SensESP/Tutorial-BMP280.git main"
+  ["SensESP-BN-880"]="git@github.com:hatlabs/SensESP-BN-880.git main"
+  ["sensesp3-halmet-example"]="git@github.com:hatlabs/sensesp3-halmet-example.git main"
+)
+
+# Source additional repository definitions (repos.*.sh files)
+for f in "$PROJECT_ROOT"/repos.*.sh; do
+  [[ -f "$f" ]] && source "$f"
+done
+
+################################################################################
+# Repository Management Commands
+
+function repos:clone {
+  #@ Clone any missing repositories
+  #@ Category: Repository Management
+  echo "Checking repositories..."
+
+  local cloned=0
+  local skipped=0
+
+  for repo in "${!REPOS[@]}"; do
+    if [ -d "$repo" ]; then
+      echo "  $repo (already exists)"
+      ((skipped++))
+    else
+      read -r url branch <<< "${REPOS[$repo]}"
+      echo "  Cloning $repo (branch: $branch)..."
+      if git clone -b "$branch" "$url" "$repo"; then
+        echo "  $repo cloned successfully"
+        ((cloned++))
+      else
+        echo "  Failed to clone $repo"
+        return 1
+      fi
+    fi
+  done
+
+  echo ""
+  echo "Summary: $cloned cloned, $skipped skipped"
+}
+
+function repos:pull-all-main {
+  #@ Pull latest changes from main branches for all repos
+  #@ Category: Repository Management
+  echo "Updating all repositories..."
+
+  local updated=0
+  local failed=0
+  local missing=0
+
+  for repo in "${!REPOS[@]}"; do
+    if [ ! -d "$repo" ]; then
+      echo "  $repo (missing - run 'repos:clone' first)"
+      ((missing++))
+      continue
+    fi
+
+    read -r url branch <<< "${REPOS[$repo]}"
+    echo "  Updating $repo (branch: $branch)..."
+
+    if (cd "$repo" && git pull origin "$branch"); then
+      echo "  $repo updated successfully"
+      ((updated++))
+    else
+      echo "  Failed to update $repo"
+      ((failed++))
+    fi
+  done
+
+  echo ""
+  echo "Summary: $updated updated, $failed failed, $missing missing"
+
+  if [ $failed -gt 0 ]; then
+    return 1
+  fi
+}
+
+function repos:status {
+  #@ Show git status for all repositories
+  #@ Category: Repository Management
+  echo "Repository status:"
+  echo ""
+
+  for repo in "${!REPOS[@]}"; do
+    if [ ! -d "$repo" ]; then
+      echo "  $repo: NOT CLONED"
+      continue
+    fi
+
+    echo "  $repo:"
+    (cd "$repo" && git status -sb)
+    echo ""
+  done
+}
+
+function repos:list {
+  #@ List all managed repositories
+  #@ Category: Repository Management
+  echo "Managed repositories:"
+  echo ""
+
+  for repo in "${!REPOS[@]}"; do
+    read -r url branch <<< "${REPOS[$repo]}"
+    local status="not cloned"
+    if [ -d "$repo" ]; then
+      status="cloned"
+    fi
+    printf "  %-35s %-15s %s\n" "$repo" "($branch)" "$status"
+  done
+}
+
+################################################################################
+# Help System
+
+function help {
+  #@ Show this help message
+  #@ Category: Core
+  echo "Available commands:"
+  echo ""
+
+  # Extract function definitions and their help comments
+  awk '/^function / {
+    fname = $2
+    sub(/[({].*/, "", fname)
+    getline
+    if ($0 ~ /#@/) {
+      desc = $0
+      sub(/.*#@ /, "", desc)
+      sub(/ *$/, "", desc)
+      getline
+      if ($0 ~ /#@ Category:/) {
+        cat = $0
+        sub(/.*Category: /, "", cat)
+        sub(/ *$/, "", cat)
+        if (!seen[cat]++) categories[++cat_count] = cat
+        commands[cat, ++cmd_count[cat]] = fname
+        descriptions[cat, cmd_count[cat]] = desc
+      }
+    }
+  }
+  END {
+    for (i = 1; i <= cat_count; i++) {
+      cat = categories[i]
+      print "\n" cat ":"
+      for (j = 1; j <= cmd_count[cat]; j++) {
+        printf "  %-30s %s\n", commands[cat, j], descriptions[cat, j]
+      }
+    }
+  }' "$0"
+
+  echo ""
+  echo "Usage: ./run <command> [arguments...]"
+}
+
+################################################################################
+# Commands end.
+
+# Dispatch to command. A simpler version would be just "$@" (with the quotes!).
+
+TIMEFORMAT=$'\nTask completed in %3lR'
+time "${@:-help}"
+
+# Some dev notes for this script.
+#
+# The commands *require*:
+#
+# * The current working directory is the project root.
+# * The shell options and globals are set as they are.
+#
+# Inspired by the following:
+#  - https://death.andgravity.com/run-sh
+#  - http://www.oilshell.org/blog/2020/02/good-parts-sketch.html
+#  - https://www.youtube.com/watch?v=SdmYd5hJISM&t=7s
