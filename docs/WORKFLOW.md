@@ -28,7 +28,7 @@ Topics to cover:
 5. **Network**: Is there an NMEA 2000 backbone? NMEA 0183 wiring? WiFi network on board?
 6. **Computers**: Raspberry Pi or other onboard computer? Signal K server running? What software?
 7. **Tank senders**: Fuel, fresh water, black water, holding tank. What type of senders (resistive, capacitive, ultrasonic)? Are they already installed?
-8. **Hat Labs hardware**: Which Hat Labs boards do they already own or plan to use?
+8. **Hat Labs and DIY hardware**: Which Hat Labs boards do they already own or plan to use? Any other ESP32-based devices, DIY sensors, or custom boards on the boat?
 9. **Goals**: What are they most interested in achieving? (monitoring, alarms, data logging, integration with chart plotter, remote monitoring, etc.)
 
 **Output**: Write the answers to `system-profile.md` in a clear, structured format. This file is gitignored and stays local to the workspace.

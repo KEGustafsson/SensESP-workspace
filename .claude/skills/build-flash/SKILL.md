@@ -39,23 +39,33 @@ Build the firmware, upload it to the connected device, and read serial output to
    - "Wrong port" → Try specifying the port with `--upload-port`.
    - Explain what's happening in plain terms.
 
-## Phase 3: Monitor
+## Phase 3: Monitor and Configure
 
 1. Run `python3 serial_monitor.py -t 30` to capture 30 seconds of device output.
 2. Read the output and interpret it:
    - **SensESP boot messages**: WiFi connection status, Signal K server connection, sensor initialization.
    - **Sensor readings**: Are values plausible? (temperature in expected range, pressure not zero, etc.)
    - **Errors**: Stack traces, assertion failures, watchdog resets.
-3. Present a summary to the user: "Your device is running. It's reading a temperature of 23.4C from the engine sensor and sending it to Signal K."
+3. **For SensESP projects**: Guide the user through initial device setup:
+   - Connect to the device's WiFi access point (SensESP creates one on first boot).
+   - Open the web UI and configure WiFi credentials for the boat's network.
+   - Review the web UI configuration settings (sensor paths, update intervals, etc.).
+   - Verify the device connects to WiFi (check serial output).
+4. **End-to-end check**: Ask the user to verify data arrives where expected:
+   - Signal K server: can they see the data in the dashboard?
+   - NMEA 2000 chart plotter: do the values show up?
+   - Guide them based on their setup in `system-profile.md`.
+5. Present a summary to the user: "Your device is running. It's reading a temperature of 23.4C from the engine sensor and sending it to Signal K."
 
 ## Phase 4: Evaluate
 
-Based on the serial output:
+Based on the serial output and user feedback:
 
 - **Everything looks good**: Celebrate! Ask if they want to adjust anything or move to review.
 - **Sensor readings look wrong**: Suggest checking wiring, pull-ups, scaling factors. Read the hardware doc again.
 - **Device crashes or reboots**: Look for stack traces, fix the code, rebuild (go to Phase 1).
-- **WiFi not connecting**: Remind them that SensESP has a web configuration portal -- they need to connect to the device's WiFi AP first and configure credentials.
+- **WiFi not connecting**: Walk them through the SensESP web configuration portal step by step -- connect to the device's AP, configure credentials, verify connection.
+- **Data not showing on Signal K / chart plotter**: Check the output configuration, Signal K paths, N2K PGNs. Verify the device is on the same network or bus.
 - **No sensor output**: Check that the sensor initialization code matches the actual wiring.
 
 If changes are needed, fix the code and loop back to Phase 1.
