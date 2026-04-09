@@ -55,6 +55,30 @@ for f in "$PROJECT_ROOT"/repos.*.sh; do
 done
 
 ################################################################################
+# Internal Helpers
+
+function _install_system_packages {
+  # On Debian/Ubuntu, detect and install missing basic tools via apt.
+  # This handles fresh Ubuntu installs where git, curl, python3 aren't present.
+  if ! command -v apt-get &> /dev/null; then
+    return
+  fi
+
+  local missing=()
+  command -v curl &> /dev/null   || missing+=(curl)
+  command -v python3 &> /dev/null || missing+=(python3)
+
+  if [[ ${#missing[@]} -eq 0 ]]; then
+    return
+  fi
+
+  echo "Installing missing system packages: ${missing[*]}"
+  echo "  (This requires sudo and may ask for your password.)"
+  sudo apt-get update -qq && sudo apt-get install -y -qq "${missing[@]}"
+  echo ""
+}
+
+################################################################################
 # Initialization
 
 function init {
@@ -64,6 +88,9 @@ function init {
   echo "Setting up SensESP workspace..."
   echo ""
 
+  # On Linux, install missing basic tools via apt if available
+  _install_system_packages
+
   # Check git
   if ! command -v git &> /dev/null; then
     echo "ERROR: git is not installed."
@@ -71,6 +98,13 @@ function init {
     exit 1
   fi
   echo "  git: $(git --version)"
+
+  # Check curl (needed for uv installer)
+  if ! command -v curl &> /dev/null; then
+    echo "ERROR: curl is not installed."
+    echo "Please install curl and try again."
+    exit 1
+  fi
 
   # Check python3
   if ! command -v python3 &> /dev/null; then

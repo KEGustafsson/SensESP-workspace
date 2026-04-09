@@ -5,7 +5,7 @@
 Before using this workspace, you need:
 
 1. **Claude Code** -- the AI coding assistant that drives the development process.
-   Install from: https://docs.anthropic.com/en/docs/build-with-claude/claude-code/overview
+   Install from: https://code.claude.com/docs/en/quickstart
 
 2. **A computer** running macOS, Linux, or Windows (with WSL).
 

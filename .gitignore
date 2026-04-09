@@ -2,6 +2,7 @@ ref/
 projects/
 .pio/
 CLAUDE.local.md
+system-profile.md
 repos.*.sh
 .DS_Store
 *.swp
