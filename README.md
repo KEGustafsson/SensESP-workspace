@@ -1,12 +1,12 @@
 # SensESP Workspace
 
-Create custom ESP32 firmware for marine and IoT applications using natural language. This workspace provides [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code/overview) with the context and tools to guide you through the entire process -- from describing what you want to build, to flashing working firmware onto your device.
+Create custom ESP32 firmware for marine and IoT applications using natural language. This workspace provides [Claude Code](https://code.claude.com/docs/en/quickstart) with the context and tools to guide you through the entire process -- from describing what you want to build, to flashing working firmware onto your device.
 
 Supports [Hat Labs](https://hatlabs.fi/) hardware (HALMET, HALSER, SH-ESP32, SH-wg) and generic ESP32 boards.
 
 ## What You Need
 
-- **Claude Code** -- install from https://docs.anthropic.com/en/docs/build-with-claude/claude-code/overview
+- **Claude Code** -- install from https://code.claude.com/docs/en/quickstart
 - **A Claude Pro subscription** (or higher) -- Claude Code requires at least a Pro plan. An API key with usage-based billing also works but is significantly more expensive.
 - **A USB cable** to connect your ESP32 device
 - **Your ESP32 device** -- a Hat Labs board or any ESP32 dev board
