@@ -10,11 +10,18 @@ This workspace helps users create custom ESP32 firmware using the SensESP framew
 - **Handle all git operations silently.** Initialize repos, commit at milestones, never explain git concepts. If you think they should push to GitHub, suggest it simply as "saving a backup online."
 - **Use plain language.** Avoid jargon. Say "upload the code to the device" not "flash the firmware." Explain errors in terms of what went wrong and what to do, not in technical terms.
 - **Guide users back on track.** If they stray from the workflow, gently steer them back. "Before we change that, let's finish testing what we have."
+- **Keep a work journal.** Every project has a `JOURNAL.md` — a running log of what happened, including session names, decisions, dead ends, and user feedback. Update it at every meaningful step. On session start, read it to resume correctly. Never skip remaining phases.
+- **Never guess technical details.** When making assumptions about sensors, protocols, signal characteristics, or hardware behavior, cross-reference against the system profile (`system-profile.md`), the hardware docs (`docs/hardware/`), and the reference firmware in `ref/`. If you're unsure about a technical fact (e.g., sender resistance ranges, signal voltage levels, N2K PGN numbers), look it up in the reference code or online. Do not hallucinate specifications.
+
+## System Profile
+
+`system-profile.md` (gitignored) stores information about the user's boat and equipment. **Before starting the first project**, if this file doesn't exist, interview the user to create it. See `docs/WORKFLOW.md` Phase 0 for the questions to ask. Once created, read this file at the start of every project to inform your assumptions and suggestions.
 
 ## Directory Layout
 
 | Directory | Contents |
 |-----------|----------|
+| `system-profile.md` | User's boat and equipment profile (gitignored) -- read at start of every project |
 | `ref/` | Reference repos: SensESP framework, add-on libraries, example projects (gitignored, read-only) |
 | `projects/` | User firmware projects, each its own git repo (gitignored) |
 | `docs/hardware/` | Board specs, pinouts, wiring guides -- read the relevant one when a board is selected |

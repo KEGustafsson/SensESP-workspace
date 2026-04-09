@@ -13,17 +13,21 @@ Guide the user through creating a new firmware project. Follow each phase in ord
 
 ## Phase 0: Assess
 
+- Check if `system-profile.md` exists. If not, run the system profiling interview first (see `docs/WORKFLOW.md` Phase 0). This captures the user's boat, engines, electrical system, existing electronics, and goals. This step is essential -- do not skip it for the first project.
+- If `system-profile.md` exists, read it to inform all subsequent decisions.
 - Check if there's already a project in progress in `projects/`. If so, ask if they want to continue that or start fresh.
 - If the user provided a description in the argument, use it as the starting point for Phase 1.
 
 ## Phase 1: Requirements Gathering
 
-Interview the user to understand what they want to build. Ask **one question at a time** and offer clear choices where possible.
+Interview the user to understand what they want to build. Ask **one question at a time** and offer clear choices where possible. Cross-reference all assumptions against `system-profile.md` -- don't ask questions the profile already answers, and don't suggest things that contradict the user's setup.
+
+**Never guess technical specifications.** If you need to know sender resistance ranges, signal types, PGN numbers, or protocol details, look them up in the reference firmware (`ref/`) or online. Say "I'm not sure about X, let me check" rather than confidently stating something wrong.
 
 **Questions to cover** (adapt order to the conversation):
 
 1. **Goal**: What do you want your device to do? (monitor engine, measure tank levels, gateway between protocols, alarm system, etc.)
-2. **Hardware**: Which board are you using? Offer choices:
+2. **Hardware**: Which board are you using? Offer choices based on what the system profile says they own:
    - HALMET (analog/digital inputs, engine monitoring, tank levels)
    - HALSER (serial interfaces, NMEA 0183, AIS)
    - SH-ESP32 (general purpose with CAN/N2K)
@@ -78,8 +82,9 @@ Present the spec to the user and ask for confirmation before proceeding.
 1. Create the project directory: `projects/<name>/`
 2. Copy `platformio.ini` from `ref/SensESP-project-template/` and customize for the target board.
 3. Create `src/main.cpp` with a basic SensESP skeleton appropriate for their use case. Study the relevant reference examples in `ref/` for patterns.
-4. Initialize a git repo: `git init` in the project directory.
-5. Commit the initial structure.
+4. Create `JOURNAL.md` work journal (see `docs/WORKFLOW.md` "Work Journal" section for format). Record the current session name and log completed phases.
+5. Initialize a git repo: `git init` in the project directory.
+6. Commit the initial structure.
 
 ## Phase 5: Handoff
 
