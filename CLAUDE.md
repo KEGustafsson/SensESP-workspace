@@ -1,202 +1,129 @@
-# CLAUDE.md
+# SensESP Firmware Development Workspace
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This workspace helps users create custom ESP32 firmware using the SensESP framework. Users are typically non-programmers who describe what they want in natural language. You drive the entire development process.
 
-## SensESP Workspace
+## How to Interact with Users
 
-SensESP is a Signal K sensor development toolkit for ESP32-based microcontrollers. It provides a high-level API for building marine sensor devices that connect to Signal K servers.
+- **You lead the conversation.** When a user describes a goal, start the requirements gathering workflow (see `docs/WORKFLOW.md`). Don't wait for them to ask the right questions.
+- **Interview one question at a time.** Don't overwhelm with multiple questions. Offer clear choices when possible.
+- **Provide hardware documentation proactively.** When you know which board they're using, read the relevant `docs/hardware/<board>.md` and share wiring instructions, pin assignments, and connection guidance -- even if they didn't ask.
+- **Handle all git operations silently.** Initialize repos, commit at milestones, never explain git concepts. If you think they should push to GitHub, suggest it simply as "saving a backup online."
+- **Use plain language.** Avoid jargon. Say "upload the code to the device" not "flash the firmware." Explain errors in terms of what went wrong and what to do, not in technical terms.
+- **Guide users back on track.** If they stray from the workflow, gently steer them back. "Before we change that, let's finish testing what we have."
 
-This workspace manages multiple independent repositories for convenient development. Each repository must work independently and can have no directory-level cross-dependencies.
+## Directory Layout
 
-## Local Environment Setup
+| Directory | Contents |
+|-----------|----------|
+| `ref/` | Reference repos: SensESP framework, add-on libraries, example projects (gitignored, read-only) |
+| `projects/` | User firmware projects, each its own git repo (gitignored) |
+| `docs/hardware/` | Board specs, pinouts, wiring guides -- read the relevant one when a board is selected |
+| `docs/WORKFLOW.md` | Detailed development workflow phases -- read at project start |
 
-**For additional project context, see @CLAUDE.private.md and @CLAUDE.local.md** (optional, not included in this repository).
+## Hardware Quick Reference
 
-## Contributing Guidelines
+| Board | MCU | Key Features | Power | PlatformIO env | Docs |
+|-------|-----|-------------|-------|----------------|------|
+| HALMET | ESP32 | 4x 16-bit analog (0-33V), 4x digital, CAN/N2K, 1-Wire, I2C | 5-32V | `halmet` | `docs/hardware/HALMET.md` |
+| HALSER | ESP32-C3 | RS-485/NMEA0183, RS-232, UART, CAN/N2K, 1-Wire, I2C | 5-32V | `halser` | `docs/hardware/HALSER.md` |
+| SH-ESP32 | ESP32 | Optoisolated CAN/N2K, optoisolated I/O, 1-Wire, I2C | 8-32V | `shesp32` | `docs/hardware/SH-ESP32.md` |
+| SH-wg | ESP32 (RISC-V) | Dedicated N2K-to-WiFi gateway | 8-32V | `sh-wg` | `docs/hardware/SH-wg.md` |
+| Generic ESP32 | ESP32/C3/S3 | Varies by board -- user provides specs | Varies | `esp32dev` / `esp32-c3-devkitm-1` | `docs/hardware/GENERIC-ESP32.md` |
 
-### Code Standards
+When the user mentions a board, read the corresponding hardware doc for full pinouts and wiring guidance.
 
-- Follow YAGNI, SOLID, DRY, and KISS principles
-- Write self-documenting code; comments explain "why", not "what"
-- Keep functions small and focused on a single responsibility
-- Prefer composition over inheritance
-- No magic numbers; use named constants
-- Use strict type checking; avoid `any` or equivalent escape hatches
-- C++ code follows `.clang-format` style (Google base with 2-space indent)
-- All new code requires tests -- test behavior, not implementation details
-- Documentation describes current state, not development history
+## Reference Repository Index
 
-### Git Workflow
+### Framework & Libraries (in `ref/`)
 
-- Branch from main for new work; never push directly to main
-- Branch naming: `<type>/<description>` where type = feat|fix|docs|chore|refactor|test
-- Conventional commits: `<type>(<scope>): <subject>` -- 50 char subject max, imperative mood
-- Atomic commits: one logical change per commit
-- Clean up history via rebase before creating a PR
-- Use rebase to update branches with upstream changes, never merge commits
+| Repo | What it is | When to consult |
+|------|-----------|-----------------|
+| `SensESP` | Core framework (24+ examples in `examples/`) | Always -- the foundation for all projects |
+| `ReactESP` | Async event loop library | When working with timers, callbacks, async patterns |
+| `NMEA0183` | NMEA 0183 protocol support | Serial instrument interfaces (GPS, wind, depth) |
+| `OneWire` | 1-Wire sensor support | Temperature sensors (DS18B20) |
+| `VEDirect` | Victron VE.Direct protocol | Solar chargers, battery monitors |
+| `MAX31856` | Thermocouple support | High-temperature measurement |
 
-### Pull Requests
+### Templates
 
-- One logical change per PR; refactoring and behavior changes belong in separate PRs
-- Descriptive titles suitable for release notes (under 70 characters)
-- Descriptions explain motivation (why) and approach (how), not mechanics (what)
-- Reference issues with `closes`, `fixes`, or `resolves` (e.g., "closes #18")
-- All CI checks must pass before merging -- no exceptions
-- Use merge commits (not squash) to preserve commit history
+| Repo | Use |
+|------|-----|
+| `SensESP-project-template` | Starting point for new projects. Copy and customize. |
 
-## Independent Repositories
+### Example & Reference Firmware
 
-### SensESP Core
+| Repo | Demonstrates |
+|------|-------------|
+| `Tutorial-BMP280` | Simple sensor tutorial -- good first example to study |
+| `HALMET-example-firmware` | Basic HALMET: ADS1115 analog inputs, digital inputs |
+| `HALSER-default-firmware` | N2K gateway with test mode selection |
+| `HALSER-ais-interface` | Complex NMEA0183 parsing, AIS decoder, bidirectional Signal K |
+| `HALSER-wind-interface` | Wind instrument interface, dual config storage |
+| `SH-ESP32-engine-hat-firmware` | Engine monitoring: analog, digital, I2C display, CAN/N2K |
+| `SH-wg-firmware` | WiFi gateway: N2K/NMEA0183, TCP/UDP streaming, SeaSmart |
+| `lumi-alarm` | Alarm system: buttons (AceButton), RGB LEDs, PWM buzzer, N2K alerts |
 
-**SensESP/** - Signal K sensor toolkit library (C++/PlatformIO)
-- Repository: `git@github.com:SignalK/SensESP.git`
-- Core library with sensor pipeline architecture
-- Has its own `AGENTS.md` and `./run` script
-- Build: `cd SensESP && ./run build-pio`
-- Frontend: `cd SensESP && ./run build-frontend`
+## Project Conventions
 
-**ReactESP/** - Event-driven framework for ESP32 (C++)
-- Repository: `git@github.com:mairas/ReactESP.git`
-- Cooperative multitasking library used by SensESP
-
-### Sensor Libraries
-
-**MAX31856/** - Thermocouple sensor library
-- Repository: `git@github.com:SensESP/MAX31856.git`
-
-**NMEA0183/** - NMEA 0183 parser for SensESP
-- Repository: `git@github.com:SensESP/NMEA0183.git`
-
-**OneWire/** - Dallas 1-Wire temperature sensors
-- Repository: `git@github.com:SensESP/OneWire.git`
-
-**VEDirect/** - Victron VE.Direct protocol for SensESP
-- Repository: `git@github.com:SensESP/VEDirect.git`
-
-### Examples and Templates
-
-**SensESP-project-template/** - Project starter template
-- Repository: `git@github.com:SensESP/SensESP-project-template.git`
-
-**Tutorial-BMP280/** - BMP280 barometer tutorial
-- Repository: `git@github.com:SensESP/Tutorial-BMP280.git`
-
-**SensESP-BN-880/** - BN-880 GPS module example
-- Repository: `git@github.com:hatlabs/SensESP-BN-880.git`
-
-**sensesp3-halmet-example/** - HALMET board example
-- Repository: `git@github.com:hatlabs/sensesp3-halmet-example.git`
-
-## Architecture
-
-### Sensor Pipeline
-
-The core SensESP architecture is a data-flow pipeline:
+New projects go in `projects/<project-name>/`. Each project is a PlatformIO project with this structure:
 
 ```
-Sensor --> Transform(s) --> Output --> Signal K Server
+projects/<name>/
+├── SPEC.md            # Requirements spec (you write this during planning)
+├── platformio.ini     # Build config -- copy from ref/SensESP-project-template and customize
+├── src/
+│   └── main.cpp       # Firmware entry point
+└── test/              # Tests (where feasible)
 ```
 
-- **Sensors** (`src/sensesp/sensors/`): Read hardware inputs (analog, digital, 1-Wire, I2C)
-- **Transforms** (`src/sensesp/transforms/`): Process data (moving average, linear, lambda, debounce)
-- **Outputs** (`src/sensesp/signalk/`): Send data to Signal K server via WebSocket
-- **Net** (`src/sensesp/net/`): WiFi management, mDNS, HTTP server, WebSocket client
-- **UI** (`src/sensesp/ui/`): Web-based configuration interface (Preact/Bootstrap)
-- **System** (`src/sensesp/system/`): Core infrastructure, observable values, task queues
-- **Controllers** (`src/sensesp/controllers/`): Control logic (e.g., PID, digital output)
+Common `lib_deps` (add to platformio.ini as needed):
+- `SignalK/SensESP @ ^3.2.0` -- always required
+- `ttlappalainen/NMEA2000-library @ ^4.17.2` -- for NMEA 2000/CAN
+- `NMEA2000_twai=https://github.com/skarlsson/NMEA2000_twai` -- ESP32 CAN driver
+- `adafruit/Adafruit ADS1X15 @ ^2.3.0` -- for HALMET analog inputs
+- `adafruit/Adafruit SSD1306 @ ^2.5.1` -- for OLED displays
 
-### Build System
-
-PlatformIO with multiple environments:
-- **Platforms**: arduino, pioarduino (recommended), espidf
-- **Devices**: esp32, esp32c3 (and custom boards: SHESP32, HALMET, HALSER)
-- **Frontend**: Preact + Bootstrap, built with pnpm, embedded via `pio run -t frontend`
-
-### CI
-
-GitHub Actions matrix builds SensESP against combinations of:
-- 6 example programs
-- 2 devices (esp32, esp32c3)
-- 2 platforms (arduino, pioarduino)
-
-## Quick Start
+## Build, Flash, and Monitor
 
 ```bash
-# Clone all component repositories
-./run repos:clone
-
-# Update all repositories to latest
-./run repos:pull-all-main
-
-# Check status of all repositories
-./run repos:status
-
-# Work in a specific repository
-cd SensESP
-./run build-pio
-```
-
-**Each repository may have its own AGENTS.md or CLAUDE.md** -- read the appropriate one for detailed context.
-
-### Per-Repository Operations
-
-Each repository has its own:
-- Git history and remote
-- Build system and dependencies
-- `./run` script (where applicable)
-
-**Always `cd` into the specific repository directory first** before running commands.
-
-### SensESP Core Development
-
-```bash
-cd SensESP
-
-# Build firmware
-./run build-pio
-
-# Build web frontend
-./run build-frontend
-
-# Full build (frontend + firmware)
-./run build
+# Build
+pio run -e <env>                    # e.g., pio run -e halmet
 
 # Upload to device
-./run upload
+pio run -e <env> -t upload          # Device must be connected via USB
 
-# Format code
-./run format
-
-# Run all checks
-./run checks
+# Monitor serial output (safe, non-interactive)
+python3 serial_monitor.py           # Auto-detect port
+python3 serial_monitor.py -t 15     # Capture 15 seconds of output
+python3 serial_monitor.py /dev/cu.usbmodem2122301  # Specify port
 ```
 
-### Frontend Development
+Serial port patterns by OS:
+- **macOS**: `/dev/cu.usbmodem*`, `/dev/cu.usbserial*`
+- **Linux**: `/dev/ttyUSB*`, `/dev/ttyACM*`
+- **WSL**: Requires USB passthrough via usbipd-win
 
-The SensESP web UI uses Preact and Bootstrap:
+## Signal K Paths
 
-```bash
-cd SensESP
-./run install-frontend    # Install pnpm dependencies
-./run build-frontend      # Compile CSS + build + embed
-```
+Common path patterns for marine data:
+- `propulsion.<engine>.temperature`, `propulsion.<engine>.oilPressure`, `propulsion.<engine>.revolutions`
+- `tanks.<type>.<instance>.currentLevel` (fuel, freshWater, blackWater, etc.)
+- `environment.inside.temperature`, `environment.outside.pressure`
+- `electrical.batteries.<instance>.voltage`, `electrical.batteries.<instance>.current`
+- `navigation.position`, `navigation.speedOverGround`, `navigation.courseOverGroundTrue`
 
-Frontend source is in `SensESP/frontend/`.
+## Token Efficiency
 
-## Repository Management
+- **Don't read entire reference repos.** Read individual files from `ref/` when you need a specific pattern.
+- **Load hardware docs only for the selected board**, not all boards.
+- **Read `docs/WORKFLOW.md` once** at project start, not on every conversation.
+- When looking for a SensESP usage pattern, check `ref/SensESP/examples/` first -- the filenames are descriptive.
 
-```bash
-# Clone all missing repositories
-./run repos:clone
+## Common Pitfalls
 
-# Update all to latest main branches
-./run repos:pull-all-main
-
-# Check status of all repos
-./run repos:status
-
-# List all managed repos
-./run repos:list
-```
-
-Additional repositories can be added via `repos.*.sh` files (gitignored) -- see README.md for details.
+- **WiFi credentials**: SensESP provides a web-based configuration UI. Don't hardcode WiFi credentials in source code unless the user explicitly requests that.
+- **Partition tables**: The default 4 MB partition table doesn't leave enough space for OTA updates. Use `min_spiffs.csv` to maximize application space. Devices with larger flash (e.g., HALMET with 16 MB) can use roomier partition schemes like `default_8MB.csv`.
+- **GPIO pinouts vary across ESP32 variants**: ESP32, ESP32-C3, ESP32-S3, etc. all have different GPIO numbering, different numbers of cores, and different peripheral mappings. Never assume pin assignments transfer between variants -- always check the specific board's hardware documentation.
+- **Analog input scaling on HALMET**: The ADS1115 raw values need voltage divider compensation. Check `ref/HALMET-example-firmware` for the correct scaling factors.
+- **NMEA 2000 address**: Each device on the N2K bus needs a unique address. SensESP does not manage address conflicts automatically. Pick an unused default address for each new device to avoid collisions.

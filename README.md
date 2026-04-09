@@ -1,108 +1,68 @@
 # SensESP Workspace
 
-SensESP is a Signal K sensor development toolkit for ESP32-based microcontrollers. This workspace manages multiple independent repositories for convenient development.
+Create custom ESP32 firmware for marine and IoT applications using natural language. This workspace provides [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code/overview) with the context and tools to guide you through the entire process -- from describing what you want to build, to flashing working firmware onto your device.
 
-## What is SensESP?
+Supports [Hat Labs](https://hatlabs.fi/) hardware (HALMET, HALSER, SH-ESP32, SH-wg) and generic ESP32 boards.
 
-SensESP provides a high-level C++ API for building marine sensor devices that connect to [Signal K](https://signalk.org/) servers. Built on the Arduino framework with PlatformIO.
+## What You Need
 
-**Use cases:**
-- Engine and exhaust temperature monitoring
-- Tank level sensors
-- Battery and solar monitoring (Victron VE.Direct)
-- NMEA 0183 interfacing
-- GPS and navigation data
-- Switch and relay control
+- **Claude Code** -- install from https://docs.anthropic.com/en/docs/build-with-claude/claude-code/overview
+- **A Claude Pro subscription** (or higher) -- Claude Code requires at least a Pro plan. An API key with usage-based billing also works but is significantly more expensive.
+- **A USB cable** to connect your ESP32 device
+- **Your ESP32 device** -- a Hat Labs board or any ESP32 dev board
 
-## Repository Structure
-
-This is a **workspace repository** containing multiple independent git repositories. Each can be checked out and worked on independently.
-
-### Core
-
-- **SensESP/** - Signal K sensor toolkit library (C++/PlatformIO)
-  - Repository: `git@github.com:SignalK/SensESP.git`
-- **ReactESP/** - Event-driven framework for ESP32
-  - Repository: `git@github.com:mairas/ReactESP.git`
-
-### Sensor Libraries
-
-- **MAX31856/** - Thermocouple sensor: `git@github.com:SensESP/MAX31856.git`
-- **NMEA0183/** - NMEA 0183 parser: `git@github.com:SensESP/NMEA0183.git`
-- **OneWire/** - Dallas 1-Wire sensors: `git@github.com:SensESP/OneWire.git`
-- **VEDirect/** - Victron VE.Direct: `git@github.com:SensESP/VEDirect.git`
-
-### Examples and Templates
-
-- **SensESP-project-template/** - Project starter: `git@github.com:SensESP/SensESP-project-template.git`
-- **Tutorial-BMP280/** - BMP280 tutorial: `git@github.com:SensESP/Tutorial-BMP280.git`
-- **SensESP-BN-880/** - GPS module example: `git@github.com:hatlabs/SensESP-BN-880.git`
-- **sensesp3-halmet-example/** - HALMET board example: `git@github.com:hatlabs/sensesp3-halmet-example.git`
+**Note:** This workspace is built specifically for Claude Code. It does not work with ChatGPT, Gemini, the Claude app, or other AI assistants.
 
 ## Quick Start
 
-```bash
-# Clone all component repositories
-./run repos:clone
+1. Clone this workspace:
+   ```
+   git clone https://github.com/hatlabs/SensESP-workspace.git
+   cd SensESP-workspace
+   ```
 
-# Update all repositories to latest
-./run repos:pull-all-main
+2. Run the setup script (installs tools and downloads reference code):
+   ```
+   ./run init
+   ```
 
-# Check status of all repositories
-./run repos:status
+3. Open Claude Code in the workspace directory and describe what you want to build.
 
-# List managed repositories
-./run repos:list
-```
+## Example First Messages
 
-### Working with Individual Components
+Once Claude Code is open, try something like:
 
-Each repository has its own build system:
+- "I want to monitor my engine temperature using HALMET"
+- "I have a DevKitC and a BMP280 pressure sensor"
+- "I want to build an NMEA 0183 to NMEA 2000 gateway with HALSER"
+- "Help me create a tank level monitor for my boat"
 
-```bash
-# SensESP core development
-cd SensESP
-./run build          # Build frontend + firmware
-./run upload         # Upload to device
+Claude will interview you about the details, show you how to wire things up, write the firmware, and help you flash it to your device.
 
-# See all available commands
-cd SensESP
-./run help
-```
-
-**Always read each repository's `AGENTS.md` or `CLAUDE.md`** for detailed development instructions.
-
-### Adding Local Repositories
-
-To manage additional repositories locally, create a `repos.*.sh` file in the workspace root (e.g., `repos.local.sh`):
-
-```bash
-# repos.local.sh (gitignored)
-REPOS["my-repo"]="git@github.com:myorg/my-repo.git main"
-```
-
-All `repos.*.sh` files are sourced by the `./run` script and can add entries to the `REPOS` array.
-
-## Architecture
-
-SensESP implements a data-flow pipeline:
+## Available Commands
 
 ```
-Sensor --> Transform(s) --> Output --> Signal K Server
+./run init            # First-time setup
+./run repos:clone     # Clone missing reference repos
+./run repos:pull      # Update reference repos
+./run repos:status    # Check what's cloned
+./run help            # Show all commands
 ```
 
-Sensors read hardware inputs, transforms process data (averaging, scaling, filtering), and outputs send results to a Signal K server via WebSocket. A built-in web UI provides configuration and monitoring.
+## Project Structure
 
-## Resources
+After setup, your workspace looks like this:
 
-- **Signal K**: https://signalk.org/
-- **SensESP Documentation**: https://signalk.org/SensESP/
-- **PlatformIO**: https://platformio.org/
+```
+SensESP-workspace/
+├── ref/          # Reference code (examples, libraries, templates)
+├── projects/     # Your firmware projects (created by Claude)
+├── docs/         # Hardware docs, workflow guides
+└── ...           # Workspace tools and configuration
+```
+
+Each project Claude creates for you goes into `projects/` as its own folder.
 
 ## License
 
-See individual repository licenses.
-
-## Contributing
-
-Contributions are welcome! Each repository accepts pull requests independently. See individual repository documentation for specific guidelines.
+Copyright 2026 Hat Labs Oy.

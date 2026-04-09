@@ -7,15 +7,9 @@
 # See https://death.andgravity.com/run-sh
 # for an explanation of how it works and why it's useful.
 
-# First, set up the environment.
-# (Check the notes at the end when changing this.)
-
 set -o nounset
 set -o pipefail
 set -o errexit
-
-# Enable this to echo commands as they are executed.
-#set -o xtrace
 
 # Change the current directory to the project root.
 PROJECT_ROOT=${0%/*}
@@ -24,129 +18,216 @@ if [[ $0 != $PROJECT_ROOT && $PROJECT_ROOT != "" ]]; then
 fi
 readonly PROJECT_ROOT=$(pwd)
 
-# Store the absolute path to this script (useful for recursion).
 readonly SCRIPT="$PROJECT_ROOT/$(basename "$0")"
 
 ################################################################################
 # Repository Definitions
+#
+# Format: name url branch
+# Using a function instead of associative arrays for bash 3.2 compatibility
+# (macOS ships bash 3.2 which lacks declare -A).
 
-declare -A REPOS=(
-  ["SensESP"]="git@github.com:SignalK/SensESP.git main"
-  ["ReactESP"]="git@github.com:mairas/ReactESP.git main"
-  ["MAX31856"]="git@github.com:SensESP/MAX31856.git main"
-  ["NMEA0183"]="git@github.com:SensESP/NMEA0183.git main"
-  ["OneWire"]="git@github.com:SensESP/OneWire.git main"
-  ["VEDirect"]="git@github.com:SensESP/VEDirect.git main"
-  ["SensESP-project-template"]="git@github.com:SensESP/SensESP-project-template.git main"
-  ["Tutorial-BMP280"]="git@github.com:SensESP/Tutorial-BMP280.git main"
-  ["SensESP-BN-880"]="git@github.com:hatlabs/SensESP-BN-880.git main"
-  ["sensesp3-halmet-example"]="git@github.com:hatlabs/sensesp3-halmet-example.git main"
-)
+repo_list() {
+  cat <<'REPOS'
+SensESP                    https://github.com/SignalK/SensESP.git                     main
+ReactESP                   https://github.com/mairas/ReactESP.git                     master
+NMEA0183                   https://github.com/SensESP/NMEA0183.git                    main
+OneWire                    https://github.com/SensESP/OneWire.git                     main
+VEDirect                   https://github.com/SensESP/VEDirect.git                    main
+MAX31856                   https://github.com/SensESP/MAX31856.git                    main
+SensESP-project-template   https://github.com/SensESP/SensESP-project-template.git    main
+Tutorial-BMP280            https://github.com/SensESP/Tutorial-BMP280.git             main
+HALMET-example-firmware    https://github.com/hatlabs/HALMET-example-firmware.git      main
+HALSER-default-firmware    https://github.com/hatlabs/HALSER-default-firmware.git      main
+HALSER-ais-interface       https://github.com/hatlabs/HALSER-ais-interface.git         main
+HALSER-wind-interface      https://github.com/hatlabs/HALSER-wind-interface.git        main
+SH-ESP32-engine-hat-firmware https://github.com/hatlabs/SH-ESP32-engine-hat-firmware.git main
+SH-wg-firmware             https://github.com/hatlabs/SH-wg-firmware.git              main
+lumi-alarm                 https://github.com/mairas/lumi-alarm.git                   main
+REPOS
+}
 
-# Source additional repository definitions (repos.*.sh files)
+# Source additional repository definitions if present.
 for f in "$PROJECT_ROOT"/repos.*.sh; do
-  [[ -f "$f" ]] && source "$f"
+  if [[ -f "$f" ]]; then
+    source "$f"
+  fi
 done
+
+################################################################################
+# Initialization
+
+function init {
+  #@ Set up the workspace: install tools, clone reference repos
+  #@ Category: Setup
+
+  echo "Setting up SensESP workspace..."
+  echo ""
+
+  # Check git
+  if ! command -v git &> /dev/null; then
+    echo "ERROR: git is not installed."
+    echo "Please install git and try again."
+    exit 1
+  fi
+  echo "  git: $(git --version)"
+
+  # Check python3
+  if ! command -v python3 &> /dev/null; then
+    echo "ERROR: python3 is not installed."
+    echo "Please install Python 3 and try again."
+    exit 1
+  fi
+  echo "  python3: $(python3 --version)"
+
+  # Check/install uv
+  if ! command -v uv &> /dev/null; then
+    echo ""
+    echo "Installing uv (Python package manager)..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    # Source the updated PATH
+    export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+    if ! command -v uv &> /dev/null; then
+      echo "ERROR: uv installation failed."
+      echo "Please install uv manually: https://docs.astral.sh/uv/getting-started/installation/"
+      exit 1
+    fi
+  fi
+  echo "  uv: $(uv --version)"
+
+  # Check/install PlatformIO
+  if ! command -v pio &> /dev/null; then
+    echo ""
+    echo "Installing PlatformIO..."
+    uv tool install platformio
+    if ! command -v pio &> /dev/null; then
+      echo "WARNING: PlatformIO installation may require restarting your shell."
+      echo "After restarting, verify with: pio --version"
+    fi
+  fi
+  if command -v pio &> /dev/null; then
+    echo "  pio: $(pio --version 2>&1 | head -1)"
+  fi
+
+  # Install pyserial for serial monitoring
+  echo ""
+  echo "Installing pyserial..."
+  uv pip install --system pyserial 2>/dev/null || pip3 install pyserial 2>/dev/null || true
+
+  # Create directories
+  mkdir -p ref projects
+
+  # Clone repos
+  echo ""
+  repos:clone
+
+  # Platform-specific guidance
+  echo ""
+  _platform_guidance
+
+  echo ""
+  echo "=========================================="
+  echo "  Workspace setup complete!"
+  echo ""
+  echo "  Next steps:"
+  echo "    1. Open Claude Code in this directory"
+  echo "    2. Describe what you want to build"
+  echo ""
+  echo "  Example:"
+  echo "    \"I want to monitor my engine"
+  echo "     temperature using HALMET\""
+  echo "=========================================="
+}
+
+function _platform_guidance {
+  # Detect platform and provide relevant guidance
+  local system
+  system="$(uname -s)"
+
+  case "$system" in
+    Linux)
+      # Check for WSL
+      if grep -qi microsoft /proc/version 2>/dev/null; then
+        echo "NOTE: WSL detected."
+        echo "  USB devices require usbipd-win for passthrough."
+        echo "  See: https://learn.microsoft.com/en-us/windows/wsl/connect-usb"
+      else
+        # Check dialout group
+        if ! groups | grep -q dialout 2>/dev/null; then
+          echo "NOTE: You may need to add yourself to the 'dialout' group"
+          echo "  for serial port access:"
+          echo "    sudo usermod -a -G dialout \$USER"
+          echo "  Then log out and back in."
+        fi
+      fi
+      ;;
+  esac
+}
 
 ################################################################################
 # Repository Management Commands
 
 function repos:clone {
-  #@ Clone any missing repositories
+  #@ Clone any missing reference repos into ref/
   #@ Category: Repository Management
-  echo "Checking repositories..."
+  echo "Checking reference repositories..."
 
   local cloned=0
   local skipped=0
+  local failed=0
 
-  for repo in "${!REPOS[@]}"; do
-    if [ -d "$repo" ]; then
-      echo "  $repo (already exists)"
-      ((skipped++))
+  repo_list | grep -v '^#' | grep -v '^\s*$' | while read -r name url branch; do
+    if [[ -d "ref/$name" ]]; then
+      echo "  $name (already cloned)"
+      # Can't increment skipped in subshell, but that's OK for display
     else
-      read -r url branch <<< "${REPOS[$repo]}"
-      echo "  Cloning $repo (branch: $branch)..."
-      if git clone -b "$branch" "$url" "$repo"; then
-        echo "  $repo cloned successfully"
-        ((cloned++))
+      echo "  Cloning $name..."
+      if git clone --depth 1 -b "$branch" "$url" "ref/$name" 2>/dev/null; then
+        echo "    Done."
       else
-        echo "  Failed to clone $repo"
-        return 1
+        echo "    WARNING: Failed to clone $name. Skipping."
       fi
     fi
   done
 
   echo ""
-  echo "Summary: $cloned cloned, $skipped skipped"
+  echo "Reference repos are in ref/"
 }
 
-function repos:pull-all-main {
-  #@ Pull latest changes from main branches for all repos
+function repos:pull {
+  #@ Update all reference repos to latest
   #@ Category: Repository Management
-  echo "Updating all repositories..."
+  echo "Updating reference repositories..."
 
-  local updated=0
-  local failed=0
-  local missing=0
-
-  for repo in "${!REPOS[@]}"; do
-    if [ ! -d "$repo" ]; then
-      echo "  $repo (missing - run 'repos:clone' first)"
-      ((missing++))
+  repo_list | grep -v '^#' | grep -v '^\s*$' | while read -r name url branch; do
+    if [[ ! -d "ref/$name" ]]; then
+      echo "  $name: not cloned (run ./run repos:clone)"
       continue
     fi
 
-    read -r url branch <<< "${REPOS[$repo]}"
-    echo "  Updating $repo (branch: $branch)..."
-
-    if (cd "$repo" && git pull origin "$branch"); then
-      echo "  $repo updated successfully"
-      ((updated++))
+    echo "  Updating $name..."
+    if (cd "ref/$name" && git pull --depth 1 origin "$branch" 2>/dev/null); then
+      echo "    Done."
     else
-      echo "  Failed to update $repo"
-      ((failed++))
+      echo "    WARNING: Failed to update $name."
     fi
   done
-
-  echo ""
-  echo "Summary: $updated updated, $failed failed, $missing missing"
-
-  if [ $failed -gt 0 ]; then
-    return 1
-  fi
 }
 
 function repos:status {
-  #@ Show git status for all repositories
+  #@ Show clone status of all reference repos
   #@ Category: Repository Management
-  echo "Repository status:"
+  echo "Reference repository status:"
   echo ""
 
-  for repo in "${!REPOS[@]}"; do
-    if [ ! -d "$repo" ]; then
-      echo "  $repo: NOT CLONED"
-      continue
+  repo_list | grep -v '^#' | grep -v '^\s*$' | while read -r name url branch; do
+    if [[ -d "ref/$name" ]]; then
+      local current_branch
+      current_branch=$(cd "ref/$name" && git branch --show-current 2>/dev/null || echo "unknown")
+      echo "  $name: cloned (branch: $current_branch)"
+    else
+      echo "  $name: NOT CLONED"
     fi
-
-    echo "  $repo:"
-    (cd "$repo" && git status -sb)
-    echo ""
-  done
-}
-
-function repos:list {
-  #@ List all managed repositories
-  #@ Category: Repository Management
-  echo "Managed repositories:"
-  echo ""
-
-  for repo in "${!REPOS[@]}"; do
-    read -r url branch <<< "${REPOS[$repo]}"
-    local status="not cloned"
-    if [ -d "$repo" ]; then
-      status="cloned"
-    fi
-    printf "  %-35s %-15s %s\n" "$repo" "($branch)" "$status"
   done
 }
 
@@ -156,13 +237,15 @@ function repos:list {
 function help {
   #@ Show this help message
   #@ Category: Core
-  echo "Available commands:"
+  echo "SensESP Workspace"
   echo ""
+  echo "Available commands:"
 
   # Extract function definitions and their help comments
   awk '/^function / {
     fname = $2
     sub(/[({].*/, "", fname)
+    if (fname ~ /^_/) next
     getline
     if ($0 ~ /#@/) {
       desc = $0
@@ -182,9 +265,9 @@ function help {
   END {
     for (i = 1; i <= cat_count; i++) {
       cat = categories[i]
-      print "\n" cat ":"
+      print "\n  " cat ":"
       for (j = 1; j <= cmd_count[cat]; j++) {
-        printf "  %-30s %s\n", commands[cat, j], descriptions[cat, j]
+        printf "    %-30s %s\n", commands[cat, j], descriptions[cat, j]
       }
     }
   }' "$0"
@@ -196,19 +279,10 @@ function help {
 ################################################################################
 # Commands end.
 
-# Dispatch to command. A simpler version would be just "$@" (with the quotes!).
+# Support --help as an alias for help.
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+  set -- help
+fi
 
 TIMEFORMAT=$'\nTask completed in %3lR'
 time "${@:-help}"
-
-# Some dev notes for this script.
-#
-# The commands *require*:
-#
-# * The current working directory is the project root.
-# * The shell options and globals are set as they are.
-#
-# Inspired by the following:
-#  - https://death.andgravity.com/run-sh
-#  - http://www.oilshell.org/blog/2020/02/good-parts-sketch.html
-#  - https://www.youtube.com/watch?v=SdmYd5hJISM&t=7s

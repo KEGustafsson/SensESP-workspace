@@ -1,0 +1,127 @@
+# HALMET Hardware Reference
+
+**Hat Labs Marine Engine and Tank Interface**
+
+Online docs: https://docs.hatlabs.fi/halmet/
+
+## Microcontroller
+
+- **MCU**: ESP32-WROOM-32E
+- **Flash**: 16 MB
+- **WiFi**: 802.11 b/g/n (2.4 GHz)
+- **Bluetooth**: BLE 4.2
+
+## Power
+
+- **Input**: 5-32V DC via NMEA 2000 connector
+- **Protection**: 500 mA self-resetting fuse, reverse polarity diode, TVS overvoltage/ESD protection, two-stage noise filtering
+- **Isolation**: Galvanic isolation between inputs and ESP32 (isolated DC/DC converter + digital isolators). Safe to power from NMEA 2000 without ground loops.
+
+## Pin Assignments
+
+| GPIO | Function | Notes |
+|------|----------|-------|
+| 18 | CAN RX | NMEA 2000 receive |
+| 19 | CAN TX | NMEA 2000 transmit |
+| 21 | I2C SDA | Shared bus |
+| 22 | I2C SCL | Shared bus |
+| 4 | 1-Wire | DS18B20 temperature sensors |
+| 23 | Digital Input 1 | Optoisolated, Schmitt trigger |
+| 25 | Digital Input 2 | Optoisolated, Schmitt trigger |
+| 27 | Digital Input 3 | Optoisolated, Schmitt trigger |
+| 26 | Digital Input 4 | Optoisolated, Schmitt trigger |
+
+## Analog Inputs
+
+4 channels via **ADS1115** 16-bit ADC on I2C (address **0x4b**).
+
+- **Voltage range**: 0-33V per channel
+- **Resolution**: 16-bit
+- **Isolation**: Galvanically isolated from ESP32
+- **Filtering**: Low-pass at 160 Hz to reduce noise
+- **Protection**: Under-voltage and over-voltage protection on each input
+- **Constant-current source**: Optional 10 mA source per channel for resistance measurement (enable via CCS jumper headers). Max measurable resistance: 320 ohm.
+
+## Digital Inputs
+
+4 optoisolated inputs with Schmitt trigger for noise immunity.
+
+- **Voltage range**: +/- 30V max
+- **Active**: Input is considered active when voltage is applied (polarity independent due to optoisolation)
+- **Use cases**: RPM/tacho signals, alarm switches, bilge pump status, ignition detection
+
+## CAN / NMEA 2000
+
+- **Pins**: GPIO 18 (RX), GPIO 19 (TX)
+- **LEDs**: RX and TX activity LEDs on board
+- **Connector**: NMEA 2000 compatible terminal block (also provides power)
+- **Protocol**: NMEA 2000 at 250 kbps
+
+## I2C
+
+- **Pins**: GPIO 21 (SDA), GPIO 22 (SCL)
+- **On-board devices**: ADS1115 ADC at address 0x4b
+- **External**: 4-pin header for additional I2C sensors or OLED display
+
+## 1-Wire
+
+- **Pin**: GPIO 4
+- **Connector**: 3-pin header (GND, 3V3, DQ)
+- **Use**: DS18B20 temperature sensors (supports multiple sensors on one bus)
+
+## User Interface
+
+- **Reset button**: Resets the ESP32
+- **Boot/user button**: Hold during reset to enter programming mode; available as general-purpose button in firmware
+- **Red LED**: Power indicator
+- **Blue LED**: User-programmable
+
+## USB
+
+- **Connector**: USB 2.0 (Micro-B or USB-C depending on revision)
+- **Function**: Programming and serial debug output
+
+## PlatformIO Configuration
+
+```ini
+[env:halmet]
+platform = espressif32
+board = esp32dev
+framework = arduino
+board_build.partitions = min_spiffs.csv
+upload_speed = 2000000
+monitor_speed = 115200
+
+lib_deps =
+    SignalK/SensESP @ ^3.2.0
+    adafruit/Adafruit ADS1X15 @ ^2.3.0
+    ttlappalainen/NMEA2000-library @ ^4.17.2
+    NMEA2000_twai=https://github.com/skarlsson/NMEA2000_twai
+```
+
+## Wiring Guide
+
+### Temperature Sender (Resistive, e.g., VDO/Faria)
+Connect the sender between an analog input and the isolated ground. Enable the CCS jumper for the channel to use constant-current resistance measurement.
+
+### Pressure Sender (Resistive)
+Same wiring as temperature sender. The resistance-to-pressure mapping depends on the specific sender model.
+
+### Tank Level Sender (Resistive)
+Same wiring pattern. Enable CCS jumper. Calibrate using known empty and full resistance values.
+
+### RPM / Tacho Signal
+Connect the tacho signal wire to a digital input. The signal ground connects to the isolated input ground. Use the `DigitalInputCounter` class in SensESP for pulse counting.
+
+### NMEA 2000
+Connect CAN H and CAN L from the NMEA 2000 backbone. Power is also supplied through this connector.
+
+### DS18B20 Temperature Sensor
+Connect to the 1-Wire header. Multiple sensors can share the same bus. Each sensor has a unique address that SensESP discovers automatically.
+
+## Gotchas
+
+- The ADS1115 raw values need voltage divider compensation for correct voltage readings. Check `ref/HALMET-example-firmware` for scaling factors.
+- When using constant-current source (CCS), the analog input reads the voltage across the resistance, not the resistance directly. Conversion formula is in the reference firmware.
+- The isolation barrier means the input ground is separate from the ESP32 ground. Don't bridge them.
+- Flash is 16 MB but the default partition scheme uses 8 MB. Use `min_spiffs.csv` partition table.

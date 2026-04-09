@@ -1,13 +1,8 @@
-# Ignore everything by default (sub-repos, symlinks, local files)
-*
-
-# Track workspace files (public)
-!.gitignore
-!CLAUDE.md
-!README.md
-!run
-!LICENSE
-
-# Track private workspace files (pushed to private remote only)
-!repos.private.sh
-!CLAUDE.private.md
+ref/
+projects/
+.pio/
+CLAUDE.local.md
+repos.*.sh
+.DS_Store
+*.swp
+*~

@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./run:*)",
+      "Bash(pio:*)",
+      "Bash(python3 serial_monitor.py:*)",
+      "Bash(python3 ./serial_monitor.py:*)",
+      "Bash(git:*)",
+      "Bash(uv:*)",
+      "Bash(ls:*)",
+      "Bash(tree:*)",
+      "Bash(which:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(chmod:*)"
+    ]
+  }
+}
