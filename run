@@ -44,6 +44,9 @@ HALSER-wind-interface      https://github.com/hatlabs/HALSER-wind-interface.git 
 SH-ESP32-engine-hat-firmware https://github.com/hatlabs/SH-ESP32-engine-hat-firmware.git main
 SH-wg-firmware             https://github.com/hatlabs/SH-wg-firmware.git              main
 lumi-alarm                 https://github.com/mairas/lumi-alarm.git                   main
+signalk-halmet-vacuflush   https://github.com/joelkoz/signalk-halmet-vacuflush.git    main
+signalk-halmet-searay-system-monitor https://github.com/joelkoz/signalk-halmet-searay-system-monitor.git main
+Morticia-eCompass          https://github.com/jrehm/Morticia-eCompass.git              main
 REPOS
 }
 
