@@ -115,6 +115,11 @@ pio run -e <env> -t upload          # Device must be connected via USB
 python3 serial_monitor.py           # Auto-detect port
 python3 serial_monitor.py -t 15     # Capture 15 seconds of output
 python3 serial_monitor.py /dev/cu.usbmodem2122301  # Specify port
+
+# Tail the device log over the network -- does NOT reset the device
+# (opening the serial port auto-resets the ESP32-C3; this reads /api/log over
+# HTTP instead). Needs SensESP main and a WiFi-connected device.
+python3 web_log_monitor.py sensesp.local -o /tmp/dev.log   # then: tail -f /tmp/dev.log
 ```
 
 Serial port patterns by OS:
