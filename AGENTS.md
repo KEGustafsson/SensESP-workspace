@@ -48,6 +48,8 @@ These apply throughout, regardless of which phase you're in.
 
 When the user mentions a board, read the corresponding hardware doc for full pinouts and wiring guidance.
 
+The `PlatformIO env` column lists each board's base env name. For any device that talks to a TLS Signal K server (all deployed devices), flash the `<env>_espidf` variant, never the plain env -- see "Build, Flash, and Monitor" below.
+
 ## Reference Repository Index
 
 ### Framework & Libraries (in `ref/`)
@@ -106,11 +108,11 @@ Common `lib_deps` (add to platformio.ini as needed):
 ## Build, Flash, and Monitor
 
 ```bash
-# Build
-pio run -e <env>                    # e.g., pio run -e halmet
+# Build (uses the project's default_envs -- always the *_espidf env; see rule below)
+pio run
 
-# Upload to device
-pio run -e <env> -t upload          # Device must be connected via USB
+# Upload to device (OTA target is set in platformio.ini, or USB)
+pio run -t upload
 
 # Monitor serial output (safe, non-interactive)
 python3 serial_monitor.py           # Auto-detect port
@@ -127,6 +129,16 @@ Serial port patterns by OS:
 - **macOS**: `/dev/cu.usbmodem*`, `/dev/cu.usbserial*`
 - **Linux**: `/dev/ttyUSB*`, `/dev/ttyACM*`
 - **WSL**: Requires USB passthrough via usbipd-win
+
+**Always flash the `*_espidf` env, never the plain arduino env.** Every project's
+`default_envs` is its `<board>_espidf` variant, so plain `pio run` / `pio run -t
+upload` is correct -- do not override with `-e <board>` (`halmet`, `halser`,
+`shesp32`, `esp32dev`). The arduino env uses precompiled libs that ignore
+`sdkconfig.defaults`, so the dynamic mbedTLS buffer and memory trims are inactive:
+against a TLS-enabled Signal K server the device **runs out of memory**,
+`mbedtls_ssl_setup` fails (`-0x7F00`), and it never connects -- it boots and joins
+WiFi but SK stays Disconnected. The plain arduino env is build-only, for fast
+non-TLS compile checks.
 
 ## Signal K Paths
 
