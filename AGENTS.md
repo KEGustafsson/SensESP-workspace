@@ -9,6 +9,7 @@ These apply throughout, regardless of which phase you're in.
 - **Don't just agree — flag problems first.** Users trust your judgement on things they can't evaluate themselves. If a request is unsafe (wrong voltage into an input, a sensor wired beyond its rating), infeasible on the chosen board, or likely to disappoint, say so plainly and kindly before going along with it. Warmth is good; false agreement that leads to fried hardware or a broken setup is not. This matters most for anything involving wiring, voltage, or current.
 - **Answer the real question first.** When a user asks "will this work?", "is this safe?", or "did you check X?", lead with the honest one-line answer — including "no" or "I'm not sure yet" — before any explanation. Don't bury the answer under reassurance.
 - **Verify the real effect, not a proxy.** "It compiled" is not "it works." "It flashed" is not "the data reached Signal K / the chart plotter." Don't tell the user something is done until you've confirmed the result they actually care about — plausible sensor readings, data arriving at its destination, no crashes. When you can't verify it yourself, walk the user through checking it (see `docs/WORKFLOW.md` Phase 7) rather than assuming.
+- **After any device update, validating core functionality is mandatory — not just the change you made.** Every flash/OTA can regress unrelated behavior: a dropped commit, a stalled boot sequence, a crash, a config wiped. After updating a device you MUST confirm its core functions still work end-to-end, not merely that the new feature's output appears or that the device is reachable. For the GNSS compass that means live position, COG, SOG, and heading reaching Signal K from the device's own source, with fresh timestamps — not just that N2K is transmitting or that the boot log looks fine. A deploy is not done until core functionality is re-verified; checking only the thing you changed is how a regression ships and surfaces underway.
 
 ## How to Interact with Users
 
@@ -46,6 +47,8 @@ These apply throughout, regardless of which phase you're in.
 | Generic ESP32 | ESP32/C3/S3 | Varies by board -- user provides specs | Varies | `esp32dev` / `esp32-c3-devkitm-1` | `docs/hardware/GENERIC-ESP32.md` |
 
 When the user mentions a board, read the corresponding hardware doc for full pinouts and wiring guidance.
+
+The `PlatformIO env` column lists each board's base env name. For any device that talks to a TLS Signal K server (all deployed devices), flash the `<env>_espidf` variant, never the plain env -- see "Build, Flash, and Monitor" below.
 
 ## Reference Repository Index
 
@@ -105,11 +108,11 @@ Common `lib_deps` (add to platformio.ini as needed):
 ## Build, Flash, and Monitor
 
 ```bash
-# Build
-pio run -e <env>                    # e.g., pio run -e halmet
+# Build (uses the project's default_envs -- always the *_espidf env; see rule below)
+pio run
 
-# Upload to device
-pio run -e <env> -t upload          # Device must be connected via USB
+# Upload to device (OTA target is set in platformio.ini, or USB)
+pio run -t upload
 
 # Monitor serial output (safe, non-interactive)
 python3 serial_monitor.py           # Auto-detect port
@@ -126,6 +129,16 @@ Serial port patterns by OS:
 - **macOS**: `/dev/cu.usbmodem*`, `/dev/cu.usbserial*`
 - **Linux**: `/dev/ttyUSB*`, `/dev/ttyACM*`
 - **WSL**: Requires USB passthrough via usbipd-win
+
+**Always flash the `*_espidf` env, never the plain arduino env.** Every project's
+`default_envs` is its `<board>_espidf` variant, so plain `pio run` / `pio run -t
+upload` is correct -- do not override with `-e <board>` (`halmet`, `halser`,
+`shesp32`, `esp32dev`). The arduino env uses precompiled libs that ignore
+`sdkconfig.defaults`, so the dynamic mbedTLS buffer and memory trims are inactive:
+against a TLS-enabled Signal K server the device **runs out of memory**,
+`mbedtls_ssl_setup` fails (`-0x7F00`), and it never connects -- it boots and joins
+WiFi but SK stays Disconnected. The plain arduino env is build-only, for fast
+non-TLS compile checks.
 
 ## Signal K Paths
 
