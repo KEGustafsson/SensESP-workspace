@@ -269,6 +269,94 @@ function repos:status {
 }
 
 ################################################################################
+# Firmware Commands
+
+function deploy {
+  #@ Build a project's *_espidf env and OTA-flash it (espota.py; no platformio.ini edits)
+  #@ Category: Firmware
+  export PATH="$HOME/.local/bin:$PATH"
+
+  local project="${1:-}"
+  local host="${2:-}"
+
+  if [[ -z "$project" ]]; then
+    echo "Usage: ./run deploy <project> [host]"
+    echo ""
+    echo "  Builds projects/<project>'s default (*_espidf) env and OTA-flashes it"
+    echo "  over the LAN with espota.py -- never 'pio run -t upload', so"
+    echo "  platformio.ini is left untouched."
+    echo "  host defaults to the device's set_hostname(...) + '.hurma'."
+    exit 1
+  fi
+
+  local proj_dir="$PROJECT_ROOT/projects/$project"
+  local ini="$proj_dir/platformio.ini"
+  local main_cpp="$proj_dir/src/main.cpp"
+  if [[ ! -f "$ini" ]]; then
+    echo "ERROR: no such project (missing $ini)"
+    exit 1
+  fi
+
+  # Build env: the project's default_envs, which is the *_espidf variant by
+  # convention -- it builds ESP-IDF from source so sdkconfig (the dynamic TLS
+  # buffer) applies, required for a stable TLS Signal K link.
+  local env
+  env=$(grep -E '^[[:space:]]*default_envs[[:space:]]*=' "$ini" | head -1 \
+        | sed -E 's/.*=[[:space:]]*//; s/[[:space:]].*//' || true)
+  if [[ -z "$env" ]]; then
+    echo "ERROR: could not read default_envs from $ini"
+    exit 1
+  fi
+
+  # OTA host and password, derived from the firmware source when not supplied.
+  if [[ -z "$host" ]]; then
+    local hostname
+    hostname=$(grep -oE 'set_hostname\("[^"]+"\)' "$main_cpp" 2>/dev/null | head -1 \
+               | sed -E 's/.*"([^"]+)".*/\1/' || true)
+    if [[ -z "$hostname" ]]; then
+      echo "ERROR: no host given and could not derive set_hostname() from $main_cpp"
+      exit 1
+    fi
+    host="$hostname.hurma"
+  fi
+  local auth
+  auth=$(grep -oE 'enable_ota\("[^"]+"\)' "$main_cpp" 2>/dev/null | head -1 \
+         | sed -E 's/.*"([^"]+)".*/\1/' || true)
+  if [[ -z "$auth" ]]; then
+    echo "ERROR: could not derive the OTA password from enable_ota() in $main_cpp"
+    exit 1
+  fi
+
+  local espota="$HOME/.platformio/packages/framework-arduinoespressif32/tools/espota.py"
+  if [[ ! -f "$espota" ]]; then
+    echo "ERROR: espota.py not found (build the project once to install the toolchain):"
+    echo "  $espota"
+    exit 1
+  fi
+
+  echo "Deploying $project [$env] -> $host"
+  echo ""
+
+  # -j2 keeps headroom on the on-boat host, which also runs live services.
+  ( cd "$proj_dir" && pio run -e "$env" -j2 )
+
+  local bin="$proj_dir/.pio/build/$env/firmware.bin"
+  if [[ ! -f "$bin" ]]; then
+    echo "ERROR: firmware not found at $bin"
+    exit 1
+  fi
+
+  echo ""
+  echo "OTA-flashing -> $host (espota.py) ..."
+  # -d prints the final 'Result: OK'; without it the success line is suppressed.
+  python3 "$espota" -i "$host" -p 3232 -a "$auth" -f "$bin" -d
+
+  echo ""
+  echo "Flashed $host. Now confirm the device rebooted and its data still flows"
+  echo "(web_log_monitor.py / Signal K) -- a flash can regress unrelated behavior."
+}
+
+################################################################################
 # Help System
 
 function help {
