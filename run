@@ -41,6 +41,8 @@ HALMET-example-firmware    https://github.com/hatlabs/HALMET-example-firmware.gi
 HALSER-default-firmware    https://github.com/hatlabs/HALSER-default-firmware.git      main
 HALSER-ais-interface       https://github.com/hatlabs/HALSER-ais-interface.git         main
 HALSER-wind-interface      https://github.com/hatlabs/HALSER-wind-interface.git        main
+HALSER-cv7-wind-interface  https://github.com/BoatHacks/HALSER-cv7-wind-interface.git  main
+HALSER-cv7-hwt3100-interface https://github.com/humppafreak/HALSER-cv7-hwt3100-interface.git main
 SH-ESP32-engine-hat-firmware https://github.com/hatlabs/SH-ESP32-engine-hat-firmware.git main
 SH-wg-firmware             https://github.com/hatlabs/SH-wg-firmware.git              main
 lumi-alarm                 https://github.com/mairas/lumi-alarm.git                   main
