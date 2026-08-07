@@ -78,6 +78,8 @@ The `PlatformIO env` column lists each board's base env name. For any device tha
 | `HALSER-default-firmware` | N2K gateway with test mode selection |
 | `HALSER-ais-interface` | Complex NMEA0183 parsing, AIS decoder, bidirectional Signal K |
 | `HALSER-wind-interface` | Wind instrument interface, dual config storage |
+| `HALSER-cv7-wind-interface` | HALSER with an LCJ Capteurs CV7 wind instrument: software-applied reference angle offset for a transmit-only sensor |
+| `HALSER-cv7-hwt3100-interface` | Adds a WitMotion HWT3100 compass over Modbus RTU, UDP NMEA 0183 broadcast, and live enable/disable toggles per input and output -- untested on hardware, read as a pattern source only |
 | `SH-ESP32-engine-hat-firmware` | Engine monitoring: analog, digital, I2C display, CAN/N2K |
 | `SH-wg-firmware` | WiFi gateway: N2K/NMEA0183, TCP/UDP streaming, SeaSmart |
 | `lumi-alarm` | Alarm system: buttons (AceButton), RGB LEDs, PWM buzzer, N2K alerts |
